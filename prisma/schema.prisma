@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  barberia
+  manicuria
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  category    Category
+  name        String
+  description String?
+  durationMin Int
+  price       Int      // efectivo
+  listPrice   Int?     // lista (opcional)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  packageItems PackageItem[]
+  bookings     Booking[]
+}
+
+model Package {
+  id            String   @id @default(cuid())
+  category      Category?
+  name          String
+  description   String?
+  durationMin   Int
+  price         Int
+  originalPrice Int?
+  discountPct   Int?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  items     PackageItem[]
+  bookings  Booking[]
+}
+
+model PackageItem {
+  id        String  @id @default(cuid())
+  packageId String
+  serviceId String
+  qty       Int     @default(1)
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@unique([packageId, serviceId])
+}
+
+model Professional {
+  id         String    @id @default(cuid())
+  name       String
+  bio        String?
+  categories Category[]
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  availability AvailabilityRule[]
+  bookings     Booking[]
+}
+
+model AvailabilityRule {
+  id             String        @id @default(cuid())
+  professionalId String
+  weekday        Int           // 0=Sun..6=Sat
+  startTime      String        // "10:00"
+  endTime        String        // "19:00"
+  slotMin        Int           @default(30)
+  active         Boolean       @default(true)
+
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@index([professionalId, weekday])
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  cancelled
+}
+
+model Booking {
+  id             String        @id @default(cuid())
+  status         BookingStatus @default(confirmed)
+  category       Category
+  serviceId      String?
+  packageId      String?
+  professionalId String
+  customerName   String
+  phone          String
+  email          String?
+  startAt        DateTime
+  endAt          DateTime
+  price          Int
+
+  service      Service?      @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  package      Package?      @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@index([professionalId, startAt])
+  @@index([startAt])
+}
