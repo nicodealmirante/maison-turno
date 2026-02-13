@@ -1,20 +1,22 @@
-FROM node:20-bullseye-slim
-
+FROM node:20-bullseye-slim AS deps
 WORKDIR /app
-
-# Prisma suele necesitar openssl en Debian slim
 RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
-
-# Copiamos package + prisma schema ANTES de instalar (para que postinstall encuentre schema)
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
+# IMPORTANT: instalar dev deps sí o sí
+RUN npm ci --include=dev
 
-RUN npm install
-
-# Ahora sí copiamos el resto
+FROM node:20-bullseye-slim AS build
+WORKDIR /app
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
 RUN npm run build
 
+FROM node:20-bullseye-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=build /app ./
 EXPOSE 3000
 CMD ["npm","start"]
