@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 
-RUN npm install
+RUN npm ci
 
 # Ahora sí copiamos el resto
 COPY . .
