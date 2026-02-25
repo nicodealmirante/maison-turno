@@ -6,10 +6,9 @@ COPY prisma ./prisma
 # IMPORTANT: instalar dev deps sí o sí
 RUN npm ci --include=dev
 
-FROM node:20-bullseye-slim AS build
-WORKDIR /app
-RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=deps /app/node_modules ./node_modules
+RUN npm ci
+
+# Ahora sí copiamos el resto
 COPY . .
 RUN npm run build
 
